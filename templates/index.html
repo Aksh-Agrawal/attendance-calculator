@@ -96,35 +96,53 @@
         <div class="modal-body">
           <!-- Date Selection Section -->
           <div class="date-selection-container">
-            <label for="attendanceDate" style="margin-bottom: 12px; display: block;">📅 Select Date:</label>
-            
+            <label
+              for="attendanceDate"
+              style="margin-bottom: 12px; display: block"
+              >📅 Select Date:</label
+            >
+
             <!-- Quick Date Buttons -->
             <div class="quick-date-buttons">
               <button onclick="setDate('today')" class="date-btn">Today</button>
-              <button onclick="setDate('yesterday')" class="date-btn">Yesterday</button>
-              <button onclick="setDate('dayBefore')" class="date-btn">2 Days Ago</button>
+              <button onclick="setDate('yesterday')" class="date-btn">
+                Yesterday
+              </button>
+              <button onclick="setDate('dayBefore')" class="date-btn">
+                2 Days Ago
+              </button>
             </div>
 
             <!-- Date Navigation -->
             <div class="date-navigation">
-              <button onclick="changeDate(-1)" class="nav-btn">← Previous Day</button>
+              <button onclick="changeDate(-1)" class="nav-btn">
+                ← Previous Day
+              </button>
               <input
                 type="date"
                 id="attendanceDate"
                 value="{{ today }}"
                 onchange="onDateChange()"
               />
-              <button onclick="changeDate(1)" class="nav-btn">Next Day →</button>
+              <button onclick="changeDate(1)" class="nav-btn">
+                Next Day →
+              </button>
             </div>
 
             <!-- Week Quick Access -->
             <div class="week-selector">
               <button onclick="setDate('monday')" class="week-btn">Mon</button>
               <button onclick="setDate('tuesday')" class="week-btn">Tue</button>
-              <button onclick="setDate('wednesday')" class="week-btn">Wed</button>
-              <button onclick="setDate('thursday')" class="week-btn">Thu</button>
+              <button onclick="setDate('wednesday')" class="week-btn">
+                Wed
+              </button>
+              <button onclick="setDate('thursday')" class="week-btn">
+                Thu
+              </button>
               <button onclick="setDate('friday')" class="week-btn">Fri</button>
-              <button onclick="setDate('saturday')" class="week-btn">Sat</button>
+              <button onclick="setDate('saturday')" class="week-btn">
+                Sat
+              </button>
             </div>
 
             <div id="selectedDateDisplay" class="selected-date-display"></div>
@@ -215,18 +233,19 @@
       let attendanceData = {};
 
       function openAttendanceModal(studentId, studentName, date) {
-        console.log('Opening modal for:', studentName);
-        
+        console.log("Opening modal for:", studentName);
+
         currentStudentId = studentId;
-        
+
         // Set modal title
         const modalTitle = document.getElementById("modalTitle");
-        if (modalTitle) modalTitle.textContent = `Mark Attendance - ${studentName}`;
-        
+        if (modalTitle)
+          modalTitle.textContent = `Mark Attendance - ${studentName}`;
+
         // Set date
         const dateInput = document.getElementById("attendanceDate");
         if (dateInput) dateInput.value = date;
-        
+
         // Show modal
         const modal = document.getElementById("attendanceModal");
         if (modal) {
@@ -239,12 +258,12 @@
         // Load existing attendance for the date
         loadAttendance(studentId, date);
         updateSummary();
-        
+
         // Update date display (wrapped in try-catch)
         try {
           updateDateDisplay();
         } catch (e) {
-          console.log('Date display update skipped:', e);
+          console.log("Date display update skipped:", e);
         }
       }
 
@@ -257,28 +276,28 @@
 
       // Date Selection Functions
       function setDate(option) {
-        const dateInput = document.getElementById('attendanceDate');
+        const dateInput = document.getElementById("attendanceDate");
         const today = new Date();
         let targetDate = new Date();
 
-        switch(option) {
-          case 'today':
+        switch (option) {
+          case "today":
             targetDate = today;
             break;
-          case 'yesterday':
+          case "yesterday":
             targetDate = new Date(today);
             targetDate.setDate(today.getDate() - 1);
             break;
-          case 'dayBefore':
+          case "dayBefore":
             targetDate = new Date(today);
             targetDate.setDate(today.getDate() - 2);
             break;
-          case 'monday':
-          case 'tuesday':
-          case 'wednesday':
-          case 'thursday':
-          case 'friday':
-          case 'saturday':
+          case "monday":
+          case "tuesday":
+          case "wednesday":
+          case "thursday":
+          case "friday":
+          case "saturday":
             targetDate = getWeekday(option);
             break;
         }
@@ -289,21 +308,29 @@
       }
 
       function getWeekday(day) {
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const days = [
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+        ];
         const today = new Date();
         const todayDay = today.getDay();
         const targetDay = days.indexOf(day);
-        
+
         let diff = targetDay - todayDay;
         if (diff > 0) diff -= 7; // Get the most recent occurrence
-        
+
         const targetDate = new Date(today);
         targetDate.setDate(today.getDate() + diff);
         return targetDate;
       }
 
       function changeDate(days) {
-        const dateInput = document.getElementById('attendanceDate');
+        const dateInput = document.getElementById("attendanceDate");
         const currentDate = new Date(dateInput.value);
         currentDate.setDate(currentDate.getDate() + days);
         dateInput.value = formatDate(currentDate);
@@ -312,40 +339,45 @@
 
       function formatDate(date) {
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       }
 
       function onDateChange() {
         if (currentStudentId) {
           clearAllMarks();
-          const date = document.getElementById('attendanceDate').value;
+          const date = document.getElementById("attendanceDate").value;
           loadAttendance(currentStudentId, date);
           updateDateDisplay();
         }
       }
 
       function updateDateDisplay() {
-        const dateInput = document.getElementById('attendanceDate');
+        const dateInput = document.getElementById("attendanceDate");
         if (!dateInput || !dateInput.value) return;
-        
-        const date = new Date(dateInput.value + 'T00:00:00');
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const displayText = date.toLocaleDateString('en-US', options);
-        
+
+        const date = new Date(dateInput.value + "T00:00:00");
+        const options = {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        };
+        const displayText = date.toLocaleDateString("en-US", options);
+
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        
-        let badge = '';
+
+        let badge = "";
         if (formatDate(date) === formatDate(today)) {
           badge = ' <span class="date-badge today-badge">Today</span>';
         } else if (formatDate(date) === formatDate(yesterday)) {
           badge = ' <span class="date-badge yesterday-badge">Yesterday</span>';
         }
-        
-        const displayElement = document.getElementById('selectedDateDisplay');
+
+        const displayElement = document.getElementById("selectedDateDisplay");
         if (displayElement) {
           displayElement.innerHTML = `<strong>Selected:</strong> ${displayText}${badge}`;
         }
@@ -353,13 +385,13 @@
 
       function highlightSelectedDay(option) {
         // Remove all highlights
-        document.querySelectorAll('.date-btn, .week-btn').forEach(btn => {
-          btn.classList.remove('selected');
+        document.querySelectorAll(".date-btn, .week-btn").forEach((btn) => {
+          btn.classList.remove("selected");
         });
-        
+
         // Add highlight to clicked button
         if (event && event.target) {
-          event.target.classList.add('selected');
+          event.target.classList.add("selected");
         }
       }
 
@@ -402,7 +434,9 @@
         if (updateSum) {
           updateSummary();
           // Visual feedback
-          const lectureItem = presentBtn ? presentBtn.closest(".lecture-item") : null;
+          const lectureItem = presentBtn
+            ? presentBtn.closest(".lecture-item")
+            : null;
           if (lectureItem) {
             lectureItem.style.transform = "scale(1.02)";
             lectureItem.style.transition = "transform 0.2s";

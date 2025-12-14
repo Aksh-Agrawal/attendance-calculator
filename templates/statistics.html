@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance Statistics - {{ student[0] }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>📊 Attendance Statistics</h1>
+        <a
+          href="/"
+          class="btn btn-secondary"
+          style="display: inline-block; margin-top: 15px"
+          >← Back to Home</a
+        >
+      </header>
+
+      <div class="card">
+        <div class="student-header">
+          <h2>{{ student[0] }}</h2>
+          <p style="font-size: 1.1rem; margin-top: 8px; opacity: 0.95">
+            Roll Number: {{ student[1] }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>📅 Weekly</h3>
+          <div
+            class="stat-percentage"
+            style="color: {% if weekly_percentage >= 75 %}#10b981{% elif weekly_percentage >= 60 %}#f59e0b{% else %}#ef4444{% endif %}"
+          >
+            {{ "%.1f"|format(weekly_percentage) }}%
+          </div>
+          <p class="stat-detail">
+            {{ weekly_present }} / {{ weekly_total }} lectures attended
+          </p>
+          <p class="stat-label">Last 7 Days</p>
+        </div>
+
+        <div class="stat-card">
+          <h3>📆 Monthly</h3>
+          <div
+            class="stat-percentage"
+            style="color: {% if monthly_percentage >= 75 %}#10b981{% elif monthly_percentage >= 60 %}#f59e0b{% else %}#ef4444{% endif %}"
+          >
+            {{ "%.1f"|format(monthly_percentage) }}%
+          </div>
+          <p class="stat-detail">
+            {{ monthly_present }} / {{ monthly_total }} lectures attended
+          </p>
+          <p class="stat-label">Last 30 Days</p>
+        </div>
+
+        <div class="stat-card">
+          <h3>📈 Overall</h3>
+          <div
+            class="stat-percentage"
+            style="color: {% if overall_percentage >= 75 %}#10b981{% elif overall_percentage >= 60 %}#f59e0b{% else %}#ef4444{% endif %}"
+          >
+            {{ "%.1f"|format(overall_percentage) }}%
+          </div>
+          <p class="stat-detail">
+            {{ overall_present }} / {{ overall_total }} lectures attended
+          </p>
+          <p class="stat-label">All Time Record</p>
+        </div>
+      </div>
+
+      <!-- Attendance Status Alert -->
+      <div class="card">
+        <h3>🎯 Attendance Status</h3>
+        {% if overall_percentage >= 75 %}
+        <div class="alert alert-success">
+          ✅ <strong>Excellent!</strong> Your attendance is above 75%. Keep up
+          the great work!
+        </div>
+        {% elif overall_percentage >= 60 %}
+        <div class="alert alert-warning">
+          ⚠️ <strong>Warning!</strong> Your attendance is below 75%. You need to
+          improve to avoid issues.
+        </div>
+        {% else %}
+        <div class="alert alert-danger">
+          ❌ <strong>Critical!</strong> Your attendance is below 60%. Immediate
+          improvement is required!
+        </div>
+        {% endif %} {% if overall_percentage < 75 %}
+        <div class="alert alert-info">
+          💡 <strong>Tip:</strong> You need to attend {{ ((75 * overall_total /
+          100) - overall_present)|round|int }} more lectures to reach the 75%
+          attendance requirement.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Attendance Records -->
+      <div class="card">
+        <h3>📋 Recent Attendance Records (Last 30 Days)</h3>
+        {% if records %}
+        <div class="records-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>L1</th>
+                <th>L2</th>
+                <th>L3</th>
+                <th>L4</th>
+                <th>L5</th>
+                <th>L6</th>
+                <th>L7</th>
+                <th>Daily %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set current_date = None %} {% set daily_records = {} %} {#
+              Group records by date #} {% for record in records %} {% set date =
+              record[0] %} {% if date not in daily_records %} {% set _ =
+              daily_records.__setitem__(date, {}) %} {% endif %} {% set _ =
+              daily_records[date].__setitem__(record[1], record[2]) %} {% endfor
+              %} {# Display grouped records #} {% for date, lectures in
+              daily_records.items() %}
+              <tr>
+                <td>{{ date }}</td>
+                {% for i in range(1, 8) %}
+                <td>
+                  {% if i in lectures %} {% if lectures[i] == 'present' %}
+                  <span class="status-badge present">P</span>
+                  {% else %}
+                  <span class="status-badge absent">A</span>
+                  {% endif %} {% else %}
+                  <span class="status-badge">-</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+                <td>
+                  {% set present_count = lectures.values()|select("equalto",
+                  "present")|list|length %} {% set total_count = lectures|length
+                  %} {% if total_count > 0 %} {{ "%.0f"|format((present_count /
+                  total_count * 100)) }}% {% else %} - {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="no-data">
+          📋 No attendance records found for the last 30 days. Start marking
+          attendance to see your records here!
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

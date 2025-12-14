@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>College Attendance Calculator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎓 College Attendance Calculator</h1>
+        <p class="subtitle">
+          Track your daily attendance for all 7 lectures with ease
+        </p>
+      </header>
+
+      <!-- Add Student Section -->
+      <div class="card">
+        <h2>➕ Add New Student</h2>
+        <form method="POST" action="/add_student">
+          <div class="form-group">
+            <input
+              type="text"
+              name="name"
+              placeholder="Enter student name (e.g., John Doe)"
+              required
+            />
+            <input
+              type="text"
+              name="roll_number"
+              placeholder="Enter roll number (e.g., 2025001)"
+              required
+            />
+            <button type="submit" class="btn btn-primary">Add Student</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Students List -->
+      <div class="card">
+        <h2>👥 All Students</h2>
+        {% if students %}
+        <div class="students-grid">
+          {% for student in students %}
+          <div class="student-card">
+            <div class="student-info">
+              <h3>{{ student[1] }}</h3>
+              <p>Roll Number: <strong>{{ student[2] }}</strong></p>
+            </div>
+            <div class="student-actions">
+              <button
+                onclick="openAttendanceModal({{ student[0] }}, '{{ student[1] }}', '{{ today }}')"
+                class="btn btn-small btn-primary"
+              >
+                ✓ Mark Attendance
+              </button>
+              <a
+                href="/statistics/{{ student[0] }}"
+                class="btn btn-small btn-secondary"
+                >📊 View Statistics</a
+              >
+              <form
+                method="POST"
+                action="/delete_student/{{ student[0] }}"
+                style="display: inline"
+              >
+                <button
+                  type="submit"
+                  class="btn btn-small btn-danger"
+                  onclick="return confirm('Are you sure you want to delete {{ student[1] }}? This will remove all attendance records.')"
+                >
+                  🗑 Delete
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-data">
+          📋 No students added yet. Start by adding your first student above!
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Attendance Modal -->
+    <div id="attendanceModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2 id="modalTitle">Mark Attendance</h2>
+        <div class="modal-body">
+          <!-- Date Selection Section -->
+          <div class="date-selection-container">
+            <label for="attendanceDate" style="margin-bottom: 12px; display: block;">📅 Select Date:</label>
+            
+            <!-- Quick Date Buttons -->
+            <div class="quick-date-buttons">
+              <button onclick="setDate('today')" class="date-btn">Today</button>
+              <button onclick="setDate('yesterday')" class="date-btn">Yesterday</button>
+              <button onclick="setDate('dayBefore')" class="date-btn">2 Days Ago</button>
+            </div>
+
+            <!-- Date Navigation -->
+            <div class="date-navigation">
+              <button onclick="changeDate(-1)" class="nav-btn">← Previous Day</button>
+              <input
+                type="date"
+                id="attendanceDate"
+                value="{{ today }}"
+                onchange="onDateChange()"
+              />
+              <button onclick="changeDate(1)" class="nav-btn">Next Day →</button>
+            </div>
+
+            <!-- Week Quick Access -->
+            <div class="week-selector">
+              <button onclick="setDate('monday')" class="week-btn">Mon</button>
+              <button onclick="setDate('tuesday')" class="week-btn">Tue</button>
+              <button onclick="setDate('wednesday')" class="week-btn">Wed</button>
+              <button onclick="setDate('thursday')" class="week-btn">Thu</button>
+              <button onclick="setDate('friday')" class="week-btn">Fri</button>
+              <button onclick="setDate('saturday')" class="week-btn">Sat</button>
+            </div>
+
+            <div id="selectedDateDisplay" class="selected-date-display"></div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="quick-actions">
+            <button
+              onclick="markAllLectures('present')"
+              class="btn btn-secondary btn-small"
+            >
+              ✓ Mark All Present
+            </button>
+            <button
+              onclick="markAllLectures('absent')"
+              class="btn btn-secondary btn-small"
+            >
+              ✗ Mark All Absent
+            </button>
+            <button
+              onclick="clearAllMarks()"
+              class="btn btn-secondary btn-small"
+            >
+              ↺ Clear All
+            </button>
+          </div>
+
+          <!-- Attendance Summary -->
+          <div class="attendance-summary">
+            <div class="summary-item">
+              <span class="summary-label">Marked:</span>
+              <span id="markedCount" class="summary-value">0/7</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Present:</span>
+              <span id="presentCount" class="summary-value present-color"
+                >0</span
+              >
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Absent:</span>
+              <span id="absentCount" class="summary-value absent-color">0</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Daily %:</span>
+              <span id="dailyPercentage" class="summary-value">0%</span>
+            </div>
+          </div>
+
+          <div class="lectures-grid">
+            <h3>📚 Mark Lectures (Click Present or Absent for each):</h3>
+            {% for i in range(1, 8) %}
+            <div class="lecture-item">
+              <span class="lecture-label">Lecture {{ i }}</span>
+              <div class="lecture-buttons">
+                <button
+                  class="btn-attendance present"
+                  onclick="markLecture({{ i }}, 'present')"
+                  id="lecture-{{ i }}-present"
+                >
+                  ✓ Present
+                </button>
+                <button
+                  class="btn-attendance absent"
+                  onclick="markLecture({{ i }}, 'absent')"
+                  id="lecture-{{ i }}-absent"
+                >
+                  ✗ Absent
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <button
+            onclick="saveAttendance()"
+            class="btn btn-primary btn-large"
+            id="saveBtn"
+          >
+            💾 Save Attendance
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentStudentId = null;
+      let attendanceData = {};
+
+      function openAttendanceModal(studentId, studentName, date) {
+        console.log('Opening modal for:', studentName);
+        
+        currentStudentId = studentId;
+        
+        // Set modal title
+        const modalTitle = document.getElementById("modalTitle");
+        if (modalTitle) modalTitle.textContent = `Mark Attendance - ${studentName}`;
+        
+        // Set date
+        const dateInput = document.getElementById("attendanceDate");
+        if (dateInput) dateInput.value = date;
+        
+        // Show modal
+        const modal = document.getElementById("attendanceModal");
+        if (modal) {
+          modal.style.display = "block";
+        }
+
+        // Reset attendance data
+        attendanceData = {};
+
+        // Load existing attendance for the date
+        loadAttendance(studentId, date);
+        updateSummary();
+        
+        // Update date display (wrapped in try-catch)
+        try {
+          updateDateDisplay();
+        } catch (e) {
+          console.log('Date display update skipped:', e);
+        }
+      }
+
+      function closeModal() {
+        document.getElementById("attendanceModal").style.display = "none";
+        attendanceData = {};
+        clearAllMarks();
+        updateSummary();
+      }
+
+      // Date Selection Functions
+      function setDate(option) {
+        const dateInput = document.getElementById('attendanceDate');
+        const today = new Date();
+        let targetDate = new Date();
+
+        switch(option) {
+          case 'today':
+            targetDate = today;
+            break;
+          case 'yesterday':
+            targetDate = new Date(today);
+            targetDate.setDate(today.getDate() - 1);
+            break;
+          case 'dayBefore':
+            targetDate = new Date(today);
+            targetDate.setDate(today.getDate() - 2);
+            break;
+          case 'monday':
+          case 'tuesday':
+          case 'wednesday':
+          case 'thursday':
+          case 'friday':
+          case 'saturday':
+            targetDate = getWeekday(option);
+            break;
+        }
+
+        dateInput.value = formatDate(targetDate);
+        onDateChange();
+        highlightSelectedDay(option);
+      }
+
+      function getWeekday(day) {
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const today = new Date();
+        const todayDay = today.getDay();
+        const targetDay = days.indexOf(day);
+        
+        let diff = targetDay - todayDay;
+        if (diff > 0) diff -= 7; // Get the most recent occurrence
+        
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + diff);
+        return targetDate;
+      }
+
+      function changeDate(days) {
+        const dateInput = document.getElementById('attendanceDate');
+        const currentDate = new Date(dateInput.value);
+        currentDate.setDate(currentDate.getDate() + days);
+        dateInput.value = formatDate(currentDate);
+        onDateChange();
+      }
+
+      function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function onDateChange() {
+        if (currentStudentId) {
+          clearAllMarks();
+          const date = document.getElementById('attendanceDate').value;
+          loadAttendance(currentStudentId, date);
+          updateDateDisplay();
+        }
+      }
+
+      function updateDateDisplay() {
+        const dateInput = document.getElementById('attendanceDate');
+        if (!dateInput || !dateInput.value) return;
+        
+        const date = new Date(dateInput.value + 'T00:00:00');
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const displayText = date.toLocaleDateString('en-US', options);
+        
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        
+        let badge = '';
+        if (formatDate(date) === formatDate(today)) {
+          badge = ' <span class="date-badge today-badge">Today</span>';
+        } else if (formatDate(date) === formatDate(yesterday)) {
+          badge = ' <span class="date-badge yesterday-badge">Yesterday</span>';
+        }
+        
+        const displayElement = document.getElementById('selectedDateDisplay');
+        if (displayElement) {
+          displayElement.innerHTML = `<strong>Selected:</strong> ${displayText}${badge}`;
+        }
+      }
+
+      function highlightSelectedDay(option) {
+        // Remove all highlights
+        document.querySelectorAll('.date-btn, .week-btn').forEach(btn => {
+          btn.classList.remove('selected');
+        });
+        
+        // Add highlight to clicked button
+        if (event && event.target) {
+          event.target.classList.add('selected');
+        }
+      }
+
+      function loadAttendance(studentId, date) {
+        fetch(`/get_attendance/${studentId}/${date}`)
+          .then((response) => response.json())
+          .then((data) => {
+            attendanceData = data;
+            // Update UI
+            for (let lectureNum in data) {
+              const status = data[lectureNum];
+              markLecture(parseInt(lectureNum), status, false);
+            }
+            updateSummary();
+          });
+      }
+
+      function markLecture(lectureNum, status, updateSum = true) {
+        attendanceData[lectureNum] = status;
+
+        // Update UI
+        const presentBtn = document.getElementById(
+          `lecture-${lectureNum}-present`
+        );
+        const absentBtn = document.getElementById(
+          `lecture-${lectureNum}-absent`
+        );
+
+        // Remove active class from both buttons
+        if (presentBtn) presentBtn.classList.remove("active");
+        if (absentBtn) absentBtn.classList.remove("active");
+
+        // Add active class to selected button
+        if (status === "present" && presentBtn) {
+          presentBtn.classList.add("active");
+        } else if (status === "absent" && absentBtn) {
+          absentBtn.classList.add("active");
+        }
+
+        if (updateSum) {
+          updateSummary();
+          // Visual feedback
+          const lectureItem = presentBtn ? presentBtn.closest(".lecture-item") : null;
+          if (lectureItem) {
+            lectureItem.style.transform = "scale(1.02)";
+            lectureItem.style.transition = "transform 0.2s";
+            setTimeout(() => {
+              lectureItem.style.transform = "scale(1)";
+            }, 200);
+          }
+        }
+      }
+
+      function markAllLectures(status) {
+        for (let i = 1; i <= 7; i++) {
+          markLecture(i, status, false);
+        }
+        updateSummary();
+
+        // Show success message
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent =
+          status === "present"
+            ? "✓ All Marked Present!"
+            : "✗ All Marked Absent!";
+        btn.style.background = status === "present" ? "#10b981" : "#ef4444";
+        btn.style.color = "white";
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = "";
+          btn.style.color = "";
+        }, 1500);
+      }
+
+      function clearAllMarks() {
+        for (let i = 1; i <= 7; i++) {
+          const presentBtn = document.getElementById(`lecture-${i}-present`);
+          const absentBtn = document.getElementById(`lecture-${i}-absent`);
+          if (presentBtn) presentBtn.classList.remove("active");
+          if (absentBtn) absentBtn.classList.remove("active");
+        }
+        attendanceData = {};
+        updateSummary();
+      }
+
+      function updateSummary() {
+        const marked = Object.keys(attendanceData).length;
+        const present = Object.values(attendanceData).filter(
+          (s) => s === "present"
+        ).length;
+        const absent = Object.values(attendanceData).filter(
+          (s) => s === "absent"
+        ).length;
+        const percentage =
+          marked > 0 ? Math.round((present / marked) * 100) : 0;
+
+        document.getElementById("markedCount").textContent = `${marked}/7`;
+        document.getElementById("presentCount").textContent = present;
+        document.getElementById("absentCount").textContent = absent;
+        document.getElementById(
+          "dailyPercentage"
+        ).textContent = `${percentage}%`;
+
+        // Color code the percentage
+        const percentageEl = document.getElementById("dailyPercentage");
+        if (percentage >= 75) {
+          percentageEl.style.color = "#10b981";
+        } else if (percentage >= 60) {
+          percentageEl.style.color = "#f59e0b";
+        } else {
+          percentageEl.style.color = "#ef4444";
+        }
+
+        // Update save button state
+        const saveBtn = document.getElementById("saveBtn");
+        if (marked === 0) {
+          saveBtn.style.opacity = "0.6";
+          saveBtn.style.cursor = "not-allowed";
+        } else {
+          saveBtn.style.opacity = "1";
+          saveBtn.style.cursor = "pointer";
+        }
+      }
+
+      function saveAttendance() {
+        const date = document.getElementById("attendanceDate").value;
+
+        if (Object.keys(attendanceData).length === 0) {
+          // Show better error message
+          const saveBtn = document.getElementById("saveBtn");
+          saveBtn.textContent = "⚠️ Please mark at least one lecture!";
+          saveBtn.style.background = "#ef4444";
+          setTimeout(() => {
+            saveBtn.textContent = "💾 Save Attendance";
+            saveBtn.style.background = "";
+          }, 2000);
+          return;
+        }
+
+        // Show loading state
+        const saveBtn = document.getElementById("saveBtn");
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = "⏳ Saving...";
+        saveBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append("student_id", currentStudentId);
+        formData.append("date", date);
+        formData.append("attendance_data", JSON.stringify(attendanceData));
+
+        fetch("/mark_attendance", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              saveBtn.textContent = "✓ Saved Successfully!";
+              saveBtn.style.background = "#10b981";
+              setTimeout(() => {
+                closeModal();
+                saveBtn.textContent = originalText;
+                saveBtn.style.background = "";
+                saveBtn.disabled = false;
+              }, 1000);
+            }
+          })
+          .catch((error) => {
+            saveBtn.textContent = "✗ Error! Try Again";
+            saveBtn.style.background = "#ef4444";
+            saveBtn.disabled = false;
+            setTimeout(() => {
+              saveBtn.textContent = originalText;
+              saveBtn.style.background = "";
+            }, 2000);
+          });
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        const modal = document.getElementById("attendanceModal");
+        if (event.target === modal) {
+          if (Object.keys(attendanceData).length > 0) {
+            if (confirm("You have unsaved changes. Close anyway?")) {
+              closeModal();
+            }
+          } else {
+            closeModal();
+          }
+        }
+      };
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", function (event) {
+        if (
+          document.getElementById("attendanceModal").style.display === "block"
+        ) {
+          // Press 1-7 to focus on that lecture
+          if (event.key >= "1" && event.key <= "7") {
+            const lectureNum = parseInt(event.key);
+            document.getElementById(`lecture-${lectureNum}-present`).focus();
+          }
+          // Press P for present on focused lecture
+          if (event.key === "p" || event.key === "P") {
+            const focused = document.activeElement;
+            if (focused.classList.contains("btn-attendance")) {
+              const lectureNum = parseInt(focused.id.match(/\d+/)[0]);
+              markLecture(lectureNum, "present");
+            }
+          }
+          // Press A for absent on focused lecture
+          if (event.key === "a" || event.key === "A") {
+            const focused = document.activeElement;
+            if (focused.classList.contains("btn-attendance")) {
+              const lectureNum = parseInt(focused.id.match(/\d+/)[0]);
+              markLecture(lectureNum, "absent");
+            }
+          }
+          // Press Enter to save
+          if (event.key === "Enter" && event.ctrlKey) {
+            saveAttendance();
+          }
+          // Press Escape to close
+          if (event.key === "Escape") {
+            if (Object.keys(attendanceData).length > 0) {
+              if (confirm("You have unsaved changes. Close anyway?")) {
+                closeModal();
+              }
+            } else {
+              closeModal();
+            }
+          }
+          // Arrow keys for date navigation
+          if (event.key === "ArrowLeft" && event.altKey) {
+            changeDate(-1);
+          }
+          if (event.key === "ArrowRight" && event.altKey) {
+            changeDate(1);
+          }
+        }
+      });
+
+      // Load attendance when date changes
+      document.addEventListener("DOMContentLoaded", function () {
+        const dateInput = document.getElementById("attendanceDate");
+        if (dateInput) {
+          dateInput.addEventListener("change", function () {
+            onDateChange();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

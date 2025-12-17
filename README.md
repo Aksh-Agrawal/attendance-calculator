@@ -27,13 +27,9 @@ pip install -r requirements.txt
 
 ## Running the Application
 
-1. Navigate to the project directory:
 
-```bash
-cd attendance
-```
 
-2. Run the Flask application:
+1. Run the Flask application:
 
 ```bash
 python app.py

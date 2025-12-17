@@ -19,6 +19,7 @@ A simple web application to track college attendance for students with 7 daily l
 2. Install required packages:
 
 ```bash
+cd attendance
 python -m venv venv
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
